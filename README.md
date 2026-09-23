@@ -11,6 +11,17 @@ Public photo archive for WP70. This repo holds the live map (a Vite + React app,
 | `scripts/` | One-off Node scripts: migrate, seed, test, time queries |
 | `docs/` | Phase reports and checklists |
 
+## Front end
+
+```sh
+npm install
+npm run dev        # http://localhost:5173/map
+npm run build      # production build in dist/
+npm test           # unit tests
+```
+
+The map lives at `/map`. State is in the query string: `?decade=1990`, `?place=hougang`, `?view=list`, plus `?embed=1` for the Webflow iframe (hides the header and footer). Colours, fonts and sizes are all in `src/styles/tokens.css`.
+
 ## Requirements
 
 - Node 22.18 or later (scripts run as TypeScript directly, with no build step)

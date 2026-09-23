@@ -1,0 +1,292 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-page);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Layout: header, filter bar, main (fills the rest), footer. */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.app__main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Header */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--header-height);
+  padding: 0 var(--space-4);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.site-header__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--color-accent-hover);
+}
+
+.site-header .button {
+  min-height: 36px;
+  /* Keeps the 44 px touch target without making the header taller. */
+  position: relative;
+}
+
+.site-header .button::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+/* Filter bar: decade chips scroll; the view toggle stays pinned right. */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.segmented {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.decade-filter {
+  flex: 1;
+}
+
+.segmented__options {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.decade-filter .segmented__options {
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  /* Room for focus rings inside the scroll box. */
+  padding: var(--focus-ring-width) var(--space-1);
+  margin: calc(-1 * var(--focus-ring-width)) calc(-1 * var(--space-1));
+}
+
+.decade-filter .segmented__options {
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+
+.decade-filter .segmented__options::-webkit-scrollbar {
+  display: none;
+}
+
+.segmented__option {
+  position: relative;
+  flex: none;
+  scroll-snap-align: start;
+}
+
+.segmented__option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.segmented__option span {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.segmented__option input:checked + span {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: var(--font-weight-bold);
+}
+
+.segmented__option input:focus-visible + span {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.view-toggle .segmented__options {
+  gap: 0;
+}
+
+.view-toggle .segmented__option:first-child span {
+  border-radius: var(--radius-pill) 0 0 var(--radius-pill);
+}
+
+.view-toggle .segmented__option:last-child span {
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+  margin-left: -1px;
+}
+
+/* Map */
+.map,
+.map.leaflet-container {
+  position: absolute;
+  inset: 0;
+  background: var(--color-map-background);
+}
+
+.map-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.leaflet-container {
+  font-family: var(--font-body);
+}
+
+.leaflet-control-attribution {
+  font-size: 11px;
+}
+
+.leaflet-control-attribution img {
+  vertical-align: middle;
+}
+
+.leaflet-bar a {
+  width: var(--touch-target) !important;
+  height: var(--touch-target) !important;
+  line-height: var(--touch-target) !important;
+}
+
+/* List view (content arrives in Phase 5) */
+.list-view {
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--color-surface);
+}
+
+.list-view h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-lg);
+}
+
+/* Footer */
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.site-footer ul {
+  display: flex;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Mobile map view keeps the full height for the map. */
+@media (max-width: 768px) {
+  .app[data-view='map'] .site-footer {
+    display: none;
+  }
+
+  .site-header__title {
+    font-size: var(--font-size-md);
+  }
+}
+
+.not-found {
+  padding: var(--space-4);
+}
