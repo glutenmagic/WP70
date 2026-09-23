@@ -96,7 +96,7 @@ Worst case is All years at 118 ms, within the 200 ms target. The project is abou
 
 Plans: All years uses a parallel index-only scan over the partial index with a hash join to places (220 heap fetches); the decade plan printed by `--plans` is a nested loop with an index-only scan per place (17 ms).
 
-The printed decade plan is not what the function runs. The function sets `search_path`, so Postgres cannot inline it and plans the body with the year bounds as placeholders. `(p_from is null or ph.year >= p_from)` then cannot become an index condition. Instead the function reads the whole partial index and filters on year, which is why decades take about 75 ms rather than 17 ms. A forced generic plan of the same body reproduces this (77 ms for the 1990s). It is well within target, so the migration is unchanged. If decades ever need to be faster, the fix is to give the function separate queries for "All years" and a year range.
+The printed decade plan is not what the function runs. Postgres never inlines a `security definer` function, so it plans the body with the year bounds as placeholders and can settle on a generic plan. `(p_from is null or ph.year >= p_from)` then cannot become an index condition. Instead the function reads the whole partial index and filters on year, which is why decades take about 75 ms rather than 17 ms. A forced generic plan of the same body reproduces this (77 ms for the 1990s). It is well within target, so the migration is unchanged. If decades ever need to be faster, the fix is to give the function separate queries for "All years" and a year range.
 
 Security test: `npm run db:test` passed (`map_functions_security.sql`, 49 s). Afterwards the project still held exactly 300,000 photos and 55 places, so the test's fixtures rolled back.
 
@@ -104,4 +104,6 @@ The scripts needed no changes. The Management API behaved as `scripts/lib/db.ts`
 
 ## Recommendation on `place_decade_counts`
 
-Not needed. The worst case is about 6 times under target on local hardware. A precomputed table only becomes worth its trigger complexity if `wp70` timings come in close to 200 ms, which is unlikely at this volume.
+Not needed. On `wp70` the worst case is 118 ms (All years), comfortably under the 200 ms target, and decades take about 75 ms. A precomputed table is only worth its trigger complexity if real traffic or data volume pushes timings close to 200 ms.
+
+The cheaper step to try first is splitting `place_photo_counts` into separate queries for "All years" and a year range. That lets decade filters use the index directly, at about 17 ms instead of 75 ms, with no new table.
