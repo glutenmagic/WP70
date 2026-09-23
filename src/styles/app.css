@@ -290,3 +290,129 @@ a {
 .not-found {
   padding: var(--space-4);
 }
+
+/* Bubbles. The anchor is a zero-size point at the place; the button is a
+   circle centred on it. The count label only shows when it fits inside the
+   circle, so text always sits on the bubble's fill. */
+.bubble-anchor {
+  background: none;
+  border: 0;
+}
+
+.bubble {
+  --d: 20px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--d);
+  height: var(--d);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-bubble-area);
+  color: var(--color-bubble-area-text);
+  font: inherit;
+  font-size: var(--font-size, 11px);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: var(--shadow-overlay);
+  transition:
+    width var(--bubble-transition),
+    height var(--bubble-transition),
+    font-size var(--bubble-transition),
+    opacity var(--bubble-transition);
+}
+
+/* Invisible 44 px touch target, in a pane below every visible bubble. */
+.bubble-hit {
+  --d: 20px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max(var(--touch-target), var(--d));
+  height: max(var(--touch-target), var(--d));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.bubble[data-kind='venue'] {
+  background: var(--color-bubble-venue);
+  color: var(--color-bubble-venue-text);
+  box-shadow:
+    inset 0 0 0 var(--bubble-venue-border-width) var(--color-bubble-venue-border),
+    var(--shadow-overlay);
+}
+
+.bubble.is-selected {
+  box-shadow:
+    0 0 0 2px var(--color-bubble-selected-gap),
+    0 0 0 5px var(--color-bubble-selected-ring),
+    var(--shadow-overlay);
+}
+
+.bubble[data-kind='venue'].is-selected {
+  box-shadow:
+    inset 0 0 0 var(--bubble-venue-border-width) var(--color-bubble-venue-border),
+    0 0 0 2px var(--color-bubble-selected-gap),
+    0 0 0 5px var(--color-bubble-selected-ring),
+    var(--shadow-overlay);
+}
+
+.bubble:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 7px;
+}
+
+.bubble.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bubble__count[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble {
+    transition: none;
+  }
+}
+
+/* Map status (loading and error), over the top of the map. */
+.map-status {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  z-index: 1000;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: calc(100% - 2 * var(--space-4));
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  box-shadow: var(--shadow-overlay);
+}
+
+.map-status--loading {
+  /* Only appears if loading takes a noticeable time. */
+  animation: map-status-in 0s 300ms both;
+}
+
+@keyframes map-status-in {
+  from {
+    visibility: hidden;
+  }
+}

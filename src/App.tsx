@@ -5,6 +5,7 @@ import { SiteHeader } from './components/SiteHeader.tsx';
 import { ViewToggle } from './components/ViewToggle.tsx';
 import { isEmbedded } from './config.ts';
 import { decadeLabel } from './lib/decades.ts';
+import { useCounts } from './lib/useCounts.ts';
 import { canonicaliseUrl, useMapState } from './lib/useMapState.ts';
 
 const MapView = lazy(() => import('./map/MapView.tsx'));
@@ -21,6 +22,7 @@ export function App() {
 function MapPage() {
   const [state, setState] = useMapState();
   const embedded = isEmbedded();
+  const counts = useCounts(state.decade);
 
   useEffect(canonicaliseUrl, []);
 
@@ -37,9 +39,16 @@ function MapPage() {
       </div>
       <main className="app__main">
         {state.view === 'map' ? (
-          <Suspense fallback={<div className="map-loading">Loading map…</div>}>
-            <MapView />
-          </Suspense>
+          <>
+            <Suspense fallback={<div className="map-loading">Loading map…</div>}>
+              <MapView
+                places={counts.data}
+                selectedId={state.place}
+                onSelect={(place) => setState({ place }, 'push')}
+              />
+            </Suspense>
+            <MapStatus status={counts.status} onRetry={counts.retry} />
+          </>
         ) : (
           <section className="list-view" aria-labelledby="list-heading">
             <h2 id="list-heading">Places</h2>
@@ -50,6 +59,28 @@ function MapPage() {
       {!embedded && <SiteFooter />}
     </div>
   );
+}
+
+/** Minimal loading and error states; Phase 5 finishes these. */
+function MapStatus({ status, onRetry }: { status: 'loading' | 'ready' | 'error'; onRetry: () => void }) {
+  if (status === 'loading') {
+    return (
+      <div className="map-status map-status--loading" role="status">
+        Loading photos…
+      </div>
+    );
+  }
+  if (status === 'error') {
+    return (
+      <div className="map-status" role="alert">
+        <span>Sorry, the photo counts didn’t load.</span>
+        <button type="button" className="button" onClick={onRetry}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+  return null;
 }
 
 function NotFound() {

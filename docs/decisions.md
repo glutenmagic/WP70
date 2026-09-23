@@ -10,6 +10,10 @@ Agreed answers to open questions in the live map spec.
 | 4 | Selected place with no photos in the new decade | The panel stays open with "No photos from <Place> in the <decade> yet. Have one? Share it." and a "Show all years" button. The place stays in the URL and focus does not move. The bubble is hidden for that decade. |
 | 5 | Cloudflare Pages | The owner connects the repo through the Cloudflare dashboard (Pages, Connect to Git). Build settings, public environment variables and the DNS record are supplied in Phase 6. |
 
+| 6 | Phone zoom | On screens too narrow for the whole island at zoom 11, the map shows OneMap's zoom 11 tiles at half size (zoom 10). No tiles outside OneMap's 11 to 19 range are requested. |
+| 7 | Decade prefetch | After the first load, the other decades are fetched in the background and cached for the session. |
+| 8 | Bubble size and labels | Largest radius 28 px at zoom 10, 34 px at zoom 11, 40 px from zoom 12. Counts show only inside circles of 28 px or more; smaller bubbles are dots. Full counts are always in the accessible name. |
+
 ## Phase 1 data choices
 
 - The migration creates a minimal `photos` table. The submission spec extends it.

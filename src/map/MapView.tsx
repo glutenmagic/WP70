@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { PlaceCount } from '../lib/api.ts';
+import { BubbleLayer } from './BubbleLayer.ts';
 import {
   ONEMAP_ATTRIBUTION,
   ONEMAP_MAX_ZOOM,
@@ -15,8 +17,19 @@ import {
 
 const FIT_PADDING = L.point(12, 12);
 
-export default function MapView() {
+interface Props {
+  places: PlaceCount[] | null;
+  selectedId: string | null;
+  onSelect: (placeId: string) => void;
+}
+
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+export default function MapView({ places, selectedId, onSelect }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<BubbleLayer | null>(null);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -60,11 +73,28 @@ export default function MapView() {
     const onResize = () => fitIsland(map.getZoom() < map.getBoundsZoom(land, false, FIT_PADDING));
     map.on('resize', onResize);
 
+    // Focusing a bubble near the edge can make the browser scroll the
+    // overflow-hidden container, which throws Leaflet's positions out.
+    const resetScroll = () => {
+      container.scrollTop = 0;
+      container.scrollLeft = 0;
+    };
+    container.addEventListener('scroll', resetScroll);
+
+    layerRef.current = new BubbleLayer(map, (id) => onSelectRef.current(id));
+
     return () => {
+      container.removeEventListener('scroll', resetScroll);
       map.off('resize', onResize);
+      layerRef.current?.destroy();
+      layerRef.current = null;
       map.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (places) layerRef.current?.update(places, selectedId, !prefersReducedMotion());
+  }, [places, selectedId]);
 
   return <div ref={containerRef} className="map" role="region" aria-label="Map of Singapore" />;
 }
