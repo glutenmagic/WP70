@@ -76,7 +76,31 @@ Plans: All years uses a parallel index-only scan over the partial index. Decades
 
 ### Supabase project `wp70`
 
-Pending. Needs `SUPABASE_ACCESS_TOKEN` in the environment.
+Run on 23 September 2026 through the Management API. Postgres 17.6, 300,000 photos (210,409 approved), 55 active places.
+
+| Filter | Places returned | `place_photo_counts` |
+|---|---|---|
+| All years | 55 | 118 ms |
+| 1950s | 55 | 74 ms |
+| 1960s | 55 | 74 ms |
+| 1970s | 55 | 74 ms |
+| 1980s | 55 | 76 ms |
+| 1990s | 55 | 76 ms |
+| 2000s | 55 | 75 ms |
+| 2010s | 55 | 75 ms |
+| 2020s | 55 | 73 ms |
+
+`place_photo_preview('hougang', All years, 12)`: 2.3 ms.
+
+Worst case is All years at 118 ms, within the 200 ms target. The project is about 4 times slower than local Docker.
+
+Plans: All years uses a parallel index-only scan over the partial index with a hash join to places (220 heap fetches); the decade plan printed by `--plans` is a nested loop with an index-only scan per place (17 ms).
+
+The printed decade plan is not what the function runs. The function sets `search_path`, so Postgres cannot inline it and plans the body with the year bounds as placeholders. `(p_from is null or ph.year >= p_from)` then cannot become an index condition. Instead the function reads the whole partial index and filters on year, which is why decades take about 75 ms rather than 17 ms. A forced generic plan of the same body reproduces this (77 ms for the 1990s). It is well within target, so the migration is unchanged. If decades ever need to be faster, the fix is to give the function separate queries for "All years" and a year range.
+
+Security test: `npm run db:test` passed (`map_functions_security.sql`, 49 s). Afterwards the project still held exactly 300,000 photos and 55 places, so the test's fixtures rolled back.
+
+The scripts needed no changes. The Management API behaved as `scripts/lib/db.ts` expects: multi-statement queries without parameters run in one session and return the last result, so the migrations' `begin`/`commit` and the test's rollback work; parameters work on single statements; `VACUUM (ANALYZE)` succeeds (every heap page was all-visible afterwards).
 
 ## Recommendation on `place_decade_counts`
 
