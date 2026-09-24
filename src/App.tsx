@@ -1,12 +1,14 @@
-import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { DecadeFilter } from './components/DecadeFilter.tsx';
+import { EmptyDecade, LoadError } from './components/EmptyDecade.tsx';
+import { LIST_SEARCH_ID, ListView } from './components/ListView.tsx';
 import { PlacePanel } from './components/PlacePanel.tsx';
 import { SiteFooter } from './components/SiteFooter.tsx';
 import { SiteHeader } from './components/SiteHeader.tsx';
 import { ViewToggle } from './components/ViewToggle.tsx';
 import { isEmbedded } from './config.ts';
-import { decadeLabel } from './lib/decades.ts';
-import { useCounts } from './lib/useCounts.ts';
+import { decadeLabel, type Decade } from './lib/decades.ts';
+import { useCounts, type CountsState } from './lib/useCounts.ts';
 import { canonicaliseUrl, useMapState } from './lib/useMapState.ts';
 import { usePreview } from './lib/usePreview.ts';
 import { useSelectedPlace } from './lib/useSelectedPlace.ts';
@@ -29,6 +31,7 @@ function MapPage() {
   const selected = useSelectedPlace(state.place, counts);
   const panelPlace = selected.status === 'ready' ? selected : null;
   const preview = usePreview(panelPlace && panelPlace.count > 0 ? panelPlace.place.place_id : null, state.decade);
+  const decadeEmpty = counts.status === 'ready' && counts.data.length === 0;
 
   // Focus moves into the panel only when the user opened it, not when a
   // deep link restores it on page load.
@@ -52,10 +55,10 @@ function MapPage() {
   const closePanel = useCallback(() => {
     const closing = state.place;
     setState({ place: null }, 'push');
-    // Return focus to the bubble (or list row) that opened the panel.
+    // Return focus to the bubble or list row that opened the panel.
     requestAnimationFrame(() => {
       const trigger = closing ? document.querySelector<HTMLElement>(`[data-place="${closing}"]`) : null;
-      (trigger ?? document.querySelector<HTMLElement>('.map'))?.focus();
+      (trigger ?? document.querySelector<HTMLElement>('.map, .list-view'))?.focus();
     });
   }, [state.place, setState]);
 
@@ -68,18 +71,41 @@ function MapPage() {
     return () => document.removeEventListener('keydown', onKey);
   }, [panelPlace, closePanel]);
 
+  const showAllYears = useCallback(() => setState({ decade: null }), [setState]);
+
+  const skipToList = () => {
+    setState({ view: 'list' });
+    requestAnimationFrame(() => document.getElementById(LIST_SEARCH_ID)?.focus());
+  };
+
   useEffect(() => {
-    document.title = `${decadeLabel(state.decade)}: WP70 Photo Archive map`;
-  }, [state.decade]);
+    const where = panelPlace ? `${panelPlace.place.name}, ` : '';
+    document.title = `${where}${decadeLabel(state.decade)}: WP70 Photo Archive map`;
+  }, [state.decade, panelPlace]);
 
   return (
     <div className="app" data-view={state.view}>
+      <a
+        href={`?view=list`}
+        className="skip-link"
+        onClick={(e) => {
+          e.preventDefault();
+          skipToList();
+        }}
+      >
+        Skip to list of places
+      </a>
       {!embedded && <SiteHeader place={state.place} decade={state.decade} />}
       <div className="filter-bar">
-        <DecadeFilter value={state.decade} onChange={(decade) => setState({ decade })} />
+        <DecadeFilter
+          value={state.decade}
+          onChange={(decade) => setState({ decade })}
+          loading={counts.status === 'loading' && counts.data === null}
+        />
         <ViewToggle value={state.view} onChange={(view) => setState({ view })} />
       </div>
       <main className="app__main" data-panel={panelPlace ? 'open' : 'closed'}>
+        <h1 className="visually-hidden">WP70 Photo Archive: photos by place and decade</h1>
         <div className="app__content">
           {state.view === 'map' ? (
             <>
@@ -91,12 +117,25 @@ function MapPage() {
                   onMapClick={panelPlace ? closePanel : undefined}
                 />
               </Suspense>
-              <MapStatus status={counts.status} onRetry={counts.retry} />
+              <MapStates counts={counts} decade={state.decade} embedded={embedded} onShowAllYears={showAllYears} />
             </>
           ) : (
-            <section className="list-view" aria-labelledby="list-heading">
+            <section className="list-view" aria-labelledby="list-heading" tabIndex={-1}>
               <h2 id="list-heading">Places</h2>
-              <p>The list of places arrives in Phase 5.</p>
+              {counts.status === 'error' ? (
+                <LoadError what="the list of places" onRetry={counts.retry} />
+              ) : decadeEmpty ? (
+                <EmptyDecade decade={state.decade} embedded={embedded} onShowAllYears={showAllYears} />
+              ) : counts.data ? (
+                <ListView
+                  places={counts.data}
+                  decade={state.decade}
+                  selectedId={panelPlace ? state.place : null}
+                  onSelect={selectPlace}
+                />
+              ) : (
+                <p className="list-view__loading">Loading places…</p>
+              )}
             </section>
           )}
         </div>
@@ -110,7 +149,7 @@ function MapPage() {
             focusOnOpen={openedByUser.current}
             onClose={closePanel}
             onShowAllYears={() => {
-              setState({ decade: null });
+              showAllYears();
               // The button goes away once photos show; keep focus in the panel.
               requestAnimationFrame(() => document.getElementById('place-panel-title')?.focus());
             }}
@@ -118,30 +157,77 @@ function MapPage() {
         )}
       </main>
       {!embedded && <SiteFooter />}
+      <Announcer counts={counts} />
     </div>
   );
 }
 
-/** Minimal loading and error states; Phase 5 finishes these. */
-function MapStatus({ status, onRetry }: { status: 'loading' | 'ready' | 'error'; onRetry: () => void }) {
-  if (status === 'loading') {
+/** Loading bar, empty decade and error, over the map. */
+function MapStates({
+  counts,
+  decade,
+  embedded,
+  onShowAllYears,
+}: {
+  counts: CountsState & { retry: () => void };
+  decade: Decade | null;
+  embedded: boolean;
+  onShowAllYears: () => void;
+}) {
+  if (counts.status === 'loading') return <div className="map-progress" aria-hidden="true" />;
+  if (counts.status === 'error') {
     return (
-      <div className="map-status map-status--loading" role="status">
-        Loading photos…
+      <div className="map-overlay">
+        <LoadError what="the photo map" onRetry={counts.retry} />
       </div>
     );
   }
-  if (status === 'error') {
+  if (counts.data.length === 0) {
     return (
-      <div className="map-status" role="alert">
-        <span>Sorry, the photo counts didn’t load.</span>
-        <button type="button" className="button" onClick={onRetry}>
-          Try again
-        </button>
+      <div className="map-overlay">
+        <EmptyDecade decade={decade} embedded={embedded} onShowAllYears={onShowAllYears} />
       </div>
     );
   }
   return null;
+}
+
+/**
+ * Tells screen reader users what changed after they pick a decade. Silent on
+ * the first load, which the page itself describes.
+ */
+function Announcer({ counts }: { counts: CountsState }) {
+  const [message, setMessage] = useState('');
+  const firstLoad = useRef(true);
+
+  useEffect(() => {
+    if (counts.status === 'loading') {
+      // Clear, so the same result is announced again after the next change.
+      setMessage('');
+      return;
+    }
+    if (counts.status === 'error') return; // LoadError announces itself.
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      return;
+    }
+    // Use the decade the data is for, never a decade still loading.
+    const { decade } = counts;
+    const n = counts.data.length;
+    const when = decade === null ? 'all years' : `the ${decadeLabel(decade)}`;
+    setMessage(
+      n === 0
+        ? `No photos from ${decade === null ? 'any year' : `the ${decadeLabel(decade)}`} yet.`
+        : `${n} ${n === 1 ? 'place' : 'places'} with photos from ${when}.`,
+    );
+    // counts.decade always changes together with counts.data.
+  }, [counts.status, counts.data]);
+
+  return (
+    <p className="visually-hidden" role="status" aria-live="polite">
+      {message}
+    </p>
+  );
 }
 
 function NotFound() {

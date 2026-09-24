@@ -4,7 +4,7 @@ import type { Decade } from './decades.ts';
 
 export type CountsState =
   | { status: 'loading'; data: PlaceCount[] | null }
-  | { status: 'ready'; data: PlaceCount[] }
+  | { status: 'ready'; data: PlaceCount[]; /** The decade `data` is for. */ decade: Decade | null }
   | { status: 'error'; data: PlaceCount[] | null };
 
 /**
@@ -21,7 +21,7 @@ export function useCounts(decade: Decade | null): CountsState & { retry: () => v
     fetchCounts(decade).then(
       (data) => {
         if (!current) return;
-        setState({ status: 'ready', data });
+        setState({ status: 'ready', data, decade });
         prefetchAllDecades();
       },
       () => {

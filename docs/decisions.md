@@ -14,6 +14,9 @@ Agreed answers to open questions in the live map spec.
 | 7 | Decade prefetch | After the first load, the other decades are fetched in the background and cached for the session. |
 | 8 | Bubble size and labels | Largest radius 28 px at zoom 10, 34 px at zoom 11, 40 px from zoom 12. Counts show only inside circles of 28 px or more; smaller bubbles are dots. Full counts are always in the accessible name. |
 
+| 9 | Place panel position | The panel sits beside the map (the map shrinks) rather than over it, so no bubble is ever hidden behind it. |
+| 10 | "Default for screen readers" | A "Skip to list of places" link is the first focusable element on the page. Screen readers cannot be detected reliably. |
+
 ## Phase 1 data choices
 
 - The migration creates a minimal `photos` table. The submission spec extends it.

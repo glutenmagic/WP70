@@ -29,6 +29,13 @@ a {
   outline-offset: 2px;
 }
 
+/* Over the map (sea, land, photos) the blue ring alone can fall below 3:1,
+   so controls there get a white halo inside it. */
+.leaflet-container :focus-visible,
+.leaflet-container:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-focus-halo);
+}
+
 .visually-hidden {
   position: absolute !important;
   width: 1px;
@@ -251,7 +258,7 @@ a {
   line-height: var(--touch-target) !important;
 }
 
-/* List view (content arrives in Phase 5) */
+/* List view */
 .list-view {
   height: 100%;
   overflow-y: auto;
@@ -259,9 +266,105 @@ a {
   background: var(--color-surface);
 }
 
+.list-view:focus {
+  outline: none;
+}
+
 .list-view h2 {
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--space-3);
   font-size: var(--font-size-lg);
+}
+
+.list-view__search {
+  max-width: 40rem;
+  margin-bottom: var(--space-3);
+}
+
+.list-view__search label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.list-view__search input {
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.list-view__summary,
+.list-view__none,
+.list-view__loading {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.place-list {
+  max-width: 40rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.place-list li {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.place-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'name count'
+    'kind count';
+  align-items: center;
+  gap: 0 var(--space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.place-row:hover {
+  background: var(--color-surface-muted);
+}
+
+.place-row[aria-pressed='true'] {
+  background: var(--color-surface-muted);
+  box-shadow: inset 4px 0 0 var(--color-accent);
+}
+
+.place-row:focus-visible {
+  outline-offset: -3px;
+}
+
+.place-row__name {
+  grid-area: name;
+  font-weight: var(--font-weight-bold);
+}
+
+.place-row__kind {
+  grid-area: kind;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.place-row__count {
+  grid-area: count;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* Footer */
@@ -377,7 +480,19 @@ a {
 
 .bubble:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 4px;
+  box-shadow:
+    0 0 0 4px var(--color-focus-halo),
+    var(--shadow-overlay);
+}
+
+.bubble.is-selected:focus-visible {
   outline-offset: 7px;
+  box-shadow:
+    0 0 0 2px var(--color-bubble-selected-gap),
+    0 0 0 5px var(--color-bubble-selected-ring),
+    0 0 0 7px var(--color-focus-halo),
+    var(--shadow-overlay);
 }
 
 .bubble.is-leaving {
@@ -395,35 +510,6 @@ a {
   }
 }
 
-/* Map status (loading and error), over the top of the map. */
-.map-status {
-  position: absolute;
-  top: var(--space-3);
-  left: 50%;
-  z-index: 1000;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  max-width: calc(100% - 2 * var(--space-4));
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: var(--font-size-sm);
-  box-shadow: var(--shadow-overlay);
-}
-
-.map-status--loading {
-  /* Only appears if loading takes a noticeable time. */
-  animation: map-status-in 0s 300ms both;
-}
-
-@keyframes map-status-in {
-  from {
-    visibility: hidden;
-  }
-}
 
 .button--secondary {
   background: var(--color-surface);
@@ -486,6 +572,13 @@ a {
 .place-panel__title:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);
   outline-offset: 2px;
+}
+
+/* Over the map (sea, land, photos) the blue ring alone can fall below 3:1,
+   so controls there get a white halo inside it. */
+.leaflet-container :focus-visible,
+.leaflet-container:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-focus-halo);
 }
 
 .place-panel__meta {
@@ -587,4 +680,130 @@ a {
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     box-shadow: 0 -2px 8px rgb(0 0 0 / 0.12);
   }
+}
+
+/* Skip link: first thing on the page, visible only when focused. */
+.skip-link {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 2000;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: var(--font-weight-bold);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+/* Empty and error messages. */
+.state-card {
+  max-width: 22rem;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.state-card p {
+  margin: 0 0 var(--space-3);
+}
+
+.state-card :last-child {
+  margin-bottom: 0;
+}
+
+.map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  pointer-events: none;
+}
+
+.map-overlay .state-card {
+  box-shadow: var(--shadow-overlay);
+  pointer-events: auto;
+}
+
+.list-view .state-card {
+  padding: 0;
+}
+
+/* Subtle loading bar along the top of the map, after a short delay. */
+.map-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 3px;
+  overflow: hidden;
+  animation: fade-in 0s 300ms both;
+}
+
+.map-progress::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+  background: var(--color-accent);
+  animation: progress-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    visibility: hidden;
+  }
+}
+
+/* First-load skeleton on the decade chips (they stay usable). */
+.decade-filter.is-loading .segmented__option span {
+  color: transparent;
+  background: var(--color-surface-muted);
+  border-color: var(--color-surface-muted);
+  animation: thumb-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-progress::before {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+
+  .decade-filter.is-loading .segmented__option span {
+    animation: none;
+  }
+}
+
+.bubble[data-kind='venue']:focus-visible {
+  box-shadow:
+    inset 0 0 0 var(--bubble-venue-border-width) var(--color-bubble-venue-border),
+    0 0 0 4px var(--color-focus-halo),
+    var(--shadow-overlay);
+}
+
+.bubble[data-kind='venue'].is-selected:focus-visible {
+  box-shadow:
+    inset 0 0 0 var(--bubble-venue-border-width) var(--color-bubble-venue-border),
+    0 0 0 2px var(--color-bubble-selected-gap),
+    0 0 0 5px var(--color-bubble-selected-ring),
+    0 0 0 7px var(--color-focus-halo),
+    var(--shadow-overlay);
 }
