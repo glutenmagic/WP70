@@ -121,6 +121,8 @@ export class BubbleLayer {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'bubble';
+    // Lets the panel return focus here when it closes.
+    button.dataset.place = place.place_id;
     const label = document.createElement('span');
     label.className = 'bubble__count';
     label.setAttribute('aria-hidden', 'true');

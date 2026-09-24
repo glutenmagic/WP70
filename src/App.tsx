@@ -1,5 +1,6 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { DecadeFilter } from './components/DecadeFilter.tsx';
+import { PlacePanel } from './components/PlacePanel.tsx';
 import { SiteFooter } from './components/SiteFooter.tsx';
 import { SiteHeader } from './components/SiteHeader.tsx';
 import { ViewToggle } from './components/ViewToggle.tsx';
@@ -7,6 +8,8 @@ import { isEmbedded } from './config.ts';
 import { decadeLabel } from './lib/decades.ts';
 import { useCounts } from './lib/useCounts.ts';
 import { canonicaliseUrl, useMapState } from './lib/useMapState.ts';
+import { usePreview } from './lib/usePreview.ts';
+import { useSelectedPlace } from './lib/useSelectedPlace.ts';
 
 const MapView = lazy(() => import('./map/MapView.tsx'));
 
@@ -23,8 +26,47 @@ function MapPage() {
   const [state, setState] = useMapState();
   const embedded = isEmbedded();
   const counts = useCounts(state.decade);
+  const selected = useSelectedPlace(state.place, counts);
+  const panelPlace = selected.status === 'ready' ? selected : null;
+  const preview = usePreview(panelPlace && panelPlace.count > 0 ? panelPlace.place.place_id : null, state.decade);
+
+  // Focus moves into the panel only when the user opened it, not when a
+  // deep link restores it on page load.
+  const openedByUser = useRef(false);
 
   useEffect(canonicaliseUrl, []);
+
+  // A place id that matches no place with approved photos: drop it from the URL.
+  useEffect(() => {
+    if (selected.status === 'unknown') setState({ place: null });
+  }, [selected.status, setState]);
+
+  const selectPlace = useCallback(
+    (place: string) => {
+      openedByUser.current = true;
+      setState({ place }, 'push');
+    },
+    [setState],
+  );
+
+  const closePanel = useCallback(() => {
+    const closing = state.place;
+    setState({ place: null }, 'push');
+    // Return focus to the bubble (or list row) that opened the panel.
+    requestAnimationFrame(() => {
+      const trigger = closing ? document.querySelector<HTMLElement>(`[data-place="${closing}"]`) : null;
+      (trigger ?? document.querySelector<HTMLElement>('.map'))?.focus();
+    });
+  }, [state.place, setState]);
+
+  useEffect(() => {
+    if (!panelPlace) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented) closePanel();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [panelPlace, closePanel]);
 
   useEffect(() => {
     document.title = `${decadeLabel(state.decade)}: WP70 Photo Archive map`;
@@ -37,23 +79,42 @@ function MapPage() {
         <DecadeFilter value={state.decade} onChange={(decade) => setState({ decade })} />
         <ViewToggle value={state.view} onChange={(view) => setState({ view })} />
       </div>
-      <main className="app__main">
-        {state.view === 'map' ? (
-          <>
-            <Suspense fallback={<div className="map-loading">Loading map…</div>}>
-              <MapView
-                places={counts.data}
-                selectedId={state.place}
-                onSelect={(place) => setState({ place }, 'push')}
-              />
-            </Suspense>
-            <MapStatus status={counts.status} onRetry={counts.retry} />
-          </>
-        ) : (
-          <section className="list-view" aria-labelledby="list-heading">
-            <h2 id="list-heading">Places</h2>
-            <p>The list of places arrives in Phase 5.</p>
-          </section>
+      <main className="app__main" data-panel={panelPlace ? 'open' : 'closed'}>
+        <div className="app__content">
+          {state.view === 'map' ? (
+            <>
+              <Suspense fallback={<div className="map-loading">Loading map…</div>}>
+                <MapView
+                  places={counts.data}
+                  selectedId={panelPlace ? state.place : null}
+                  onSelect={selectPlace}
+                  onMapClick={panelPlace ? closePanel : undefined}
+                />
+              </Suspense>
+              <MapStatus status={counts.status} onRetry={counts.retry} />
+            </>
+          ) : (
+            <section className="list-view" aria-labelledby="list-heading">
+              <h2 id="list-heading">Places</h2>
+              <p>The list of places arrives in Phase 5.</p>
+            </section>
+          )}
+        </div>
+        {panelPlace && (
+          <PlacePanel
+            place={panelPlace.place}
+            count={panelPlace.count}
+            decade={state.decade}
+            preview={preview}
+            embedded={embedded}
+            focusOnOpen={openedByUser.current}
+            onClose={closePanel}
+            onShowAllYears={() => {
+              setState({ decade: null });
+              // The button goes away once photos show; keep focus in the panel.
+              requestAnimationFrame(() => document.getElementById('place-panel-title')?.focus());
+            }}
+          />
         )}
       </main>
       {!embedded && <SiteFooter />}

@@ -68,3 +68,33 @@ export function prefetchAllDecades(): void {
   };
   schedule();
 }
+
+export interface PhotoPreview {
+  id: string;
+  thumb_url: string;
+  year: number | null;
+  caption: string | null;
+  credit_name: string | null;
+}
+
+export const PREVIEW_LIMIT = 12;
+
+const previewCache = new Map<string, Promise<PhotoPreview[]>>();
+
+/** Up to 12 approved thumbnails for a place and decade, cached for the session. */
+export function fetchPreview(placeId: string, decade: Decade | null): Promise<PhotoPreview[]> {
+  const key = `${placeId}|${cacheKey(decade)}`;
+  let pending = previewCache.get(key);
+  if (!pending) {
+    const { from, to } = decadeRange(decade);
+    pending = rpc<PhotoPreview[]>('place_photo_preview', {
+      p_place: placeId,
+      p_from: from,
+      p_to: to,
+      p_limit: PREVIEW_LIMIT,
+    });
+    pending.catch(() => previewCache.delete(key));
+    previewCache.set(key, pending);
+  }
+  return pending;
+}

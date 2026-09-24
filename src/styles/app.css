@@ -50,8 +50,16 @@ a {
 }
 
 .app__main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Map or list; shrinks to make room for the place panel. */
+.app__content {
   position: relative;
   flex: 1;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -414,5 +422,169 @@ a {
 @keyframes map-status-in {
   from {
     visibility: hidden;
+  }
+}
+
+.button--secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+
+.button--secondary:hover {
+  background: var(--color-surface-muted);
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: var(--color-surface-muted);
+}
+
+/* Place panel: a side panel on desktop, a bottom sheet on phones. It sits
+   beside the map rather than over it, so no bubble is ever hidden behind it. */
+.place-panel {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: var(--panel-width);
+  min-height: 0;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+}
+
+.place-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-2);
+}
+
+.place-panel__title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  line-height: 1.2;
+}
+
+.place-panel__title:focus {
+  outline: none;
+}
+
+.place-panel__title:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.place-panel__meta {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.place-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+}
+
+.place-panel__all {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+.place-panel__empty p,
+.place-panel__error p {
+  margin: 0 0 var(--space-3);
+}
+
+.thumb-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.thumb {
+  position: relative;
+  /* Fixed square box, so nothing shifts as images arrive. */
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+
+.thumb figure {
+  margin: 0;
+  height: 100%;
+}
+
+.thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb figcaption {
+  position: absolute;
+  left: var(--space-1);
+  bottom: var(--space-1);
+}
+
+.thumb__year {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--color-thumb-badge);
+  color: var(--color-thumb-badge-text);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+}
+
+.thumb--placeholder {
+  animation: thumb-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes thumb-pulse {
+  to {
+    background: var(--color-border);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb--placeholder {
+    animation: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .app__main {
+    flex-direction: column;
+  }
+
+  .place-panel {
+    width: auto;
+    height: var(--sheet-height);
+    border-left: 0;
+    border-top: 1px solid var(--color-border);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    box-shadow: 0 -2px 8px rgb(0 0 0 / 0.12);
   }
 }

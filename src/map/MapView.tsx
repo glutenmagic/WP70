@@ -21,15 +21,25 @@ interface Props {
   places: PlaceCount[] | null;
   selectedId: string | null;
   onSelect: (placeId: string) => void;
+  /** Called for a click or tap on the map itself (not on a bubble). */
+  onMapClick?: () => void;
 }
+
+/** Room kept clear around a revealed place: the zoom control sits top left. */
+const REVEAL_PADDING_TOP_LEFT = L.point(64, 24);
+const REVEAL_PADDING_BOTTOM_RIGHT = L.point(24, 24);
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export default function MapView({ places, selectedId, onSelect }: Props) {
+export default function MapView({ places, selectedId, onSelect, onMapClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<BubbleLayer | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const onMapClickRef = useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
+  const selectedRef = useRef<L.LatLng | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -82,8 +92,22 @@ export default function MapView({ places, selectedId, onSelect }: Props) {
     container.addEventListener('scroll', resetScroll);
 
     layerRef.current = new BubbleLayer(map, (id) => onSelectRef.current(id));
+    mapRef.current = map;
+
+    map.on('click', () => onMapClickRef.current?.());
+
+    // The panel opens beside the map and shrinks it; Leaflet only watches the
+    // window, so tell it when the container itself changes size, then keep
+    // the selected place in view.
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize({ animate: false });
+      if (selectedRef.current) reveal(map, selectedRef.current, false);
+    });
+    observer.observe(container);
 
     return () => {
+      observer.disconnect();
+      mapRef.current = null;
       container.removeEventListener('scroll', resetScroll);
       map.off('resize', onResize);
       layerRef.current?.destroy();
@@ -96,5 +120,28 @@ export default function MapView({ places, selectedId, onSelect }: Props) {
     if (places) layerRef.current?.update(places, selectedId, !prefersReducedMotion());
   }, [places, selectedId]);
 
-  return <div ref={containerRef} className="map" role="region" aria-label="Map of Singapore" />;
+  // Bring a newly selected place into view (for example from a deep link).
+  const place = selectedId ? places?.find((p) => p.place_id === selectedId) : undefined;
+  const lat = place?.lat;
+  const lng = place?.lng;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || lat === undefined || lng === undefined) {
+      selectedRef.current = null;
+      return;
+    }
+    selectedRef.current = L.latLng(lat, lng);
+    reveal(map, selectedRef.current, !prefersReducedMotion());
+  }, [selectedId, lat, lng]);
+
+  return <div ref={containerRef} className="map" role="region" aria-label="Map of Singapore" tabIndex={0} />;
+}
+
+/** Pans just enough to show `latlng` clear of the map's edges and controls. */
+function reveal(map: L.Map, latlng: L.LatLng, animate: boolean) {
+  map.panInside(latlng, {
+    paddingTopLeft: REVEAL_PADDING_TOP_LEFT,
+    paddingBottomRight: REVEAL_PADDING_BOTTOM_RIGHT,
+    animate,
+  });
 }
